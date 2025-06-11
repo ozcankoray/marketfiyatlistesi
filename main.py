@@ -46,7 +46,7 @@ def get_all_products_from_subcategory(main_category: str, sub_category: str) -> 
 
 
 def main():
-    print("🚀 Scraper vFINAL-RELIABLE (Doğru Sayfalama) Başlatılıyor...")
+    print("🚀 Program Başlatılıyor...")
 
     # Adım 1: Kategori Yapısını Oku (Değişiklik yok)
     print("\nAdım 1: Kategori yapısı doğrudan konfigürasyon dosyasından okunuyor...")
