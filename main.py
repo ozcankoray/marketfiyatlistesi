@@ -1,7 +1,8 @@
-# main.py (En Basit ve En Sağlam Sayfalama Mantığı)
+# main.py (En Güncel ve Tam Sürüm - Zaman Damgalı Kayıt)
 
 import sys
 import time
+from datetime import datetime
 from src.core import config
 from src.api.client import fetch_products_from_api
 from src.parsers.product_parser import parse_products_data
@@ -30,7 +31,7 @@ def get_all_products_from_subcategory(main_category: str, sub_category: str) -> 
             print("    -> API'den yanıt alınamadı, bu kategori atlanıyor.")
             break
 
-        # DOĞRU KONTROL: API'DEN GELEN HAM LİSTENİN KENDİSİNİ KONTROL ET
+        # API'den gelen ham ürün listesini kontrol et
         products_list = raw_data_response.get('content', [])
 
         if products_list:  # Eğer bu liste boş DEĞİLSE, ürün var demektir.
@@ -46,16 +47,17 @@ def get_all_products_from_subcategory(main_category: str, sub_category: str) -> 
 
 
 def main():
+    """Uygulamanın ana iş akışı."""
     print("🚀 Program Başlatılıyor...")
 
-    # Adım 1: Kategori Yapısını Oku (Değişiklik yok)
+    # Adım 1: Kategori Yapısını Oku
     print("\nAdım 1: Kategori yapısı doğrudan konfigürasyon dosyasından okunuyor...")
     category_structure = config.CATEGORY_STRUCTURE
     total_sub_categories = sum(len(sub_cats) for sub_cats in category_structure.values())
     print(
         f"✅ Başarılı! {len(category_structure)} ana kategori ve {total_sub_categories} alt kategori işlenmek üzere yüklendi.")
 
-    # Adım 2: Her Alt Kategori İçin Doğrudan Arama (Değişiklik yok)
+    # Adım 2: Her Alt Kategori İçin Doğrudan Arama
     all_products_total = []
     print("\nAdım 2: Her bir alt kategori için ürünler taranıyor...")
 
@@ -71,9 +73,17 @@ def main():
             else:
                 print(f"  ⚠️  '{sub_cat}' alt kategorisi için hiç ürün bulunamadı.")
 
-    # Adım 3: Excel'e Kaydetme (Değişiklik yok)
-    filename = "market_fiyatlari.xlsx"
+    # Adım 3: Dinamik Dosya Adı Oluşturma ve Excel'e Kaydetme
+
+    # Bugünün tarihini "YYYY-AA-GG" formatında al
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Dosya adını bu tarih damgasıyla birleştir
+    filename = f"market_fiyatlari_{today_str}.xlsx"
+
     print(f"\nAdım 3: Toplamda bulunan {len(all_products_total)} adet ürün Excel'e kaydediliyor...")
+    print(f"  -> Dosya adı: {filename}")
+
     save_to_excel(all_products_total, filename=filename)
 
     print(f"\n✅ Tüm işlemler tamamlandı. {len(all_products_total)} ürün '{filename}' dosyasına yazıldı.")
