@@ -72,7 +72,7 @@ def main():
                 print(f"  ⚠️  '{sub_cat}' alt kategorisi için hiç ürün bulunamadı.")
 
     # Adım 3: Excel'e Kaydetme (Değişiklik yok)
-    filename = "market_fiyatlari_SON_VERSIYON.xlsx"
+    filename = "market_fiyatlari.xlsx"
     print(f"\nAdım 3: Toplamda bulunan {len(all_products_total)} adet ürün Excel'e kaydediliyor...")
     save_to_excel(all_products_total, filename=filename)
 
