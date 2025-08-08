@@ -1,82 +1,83 @@
-# main.py (En Basit ve En Sağlam Sayfalama Mantığı)
-
-import sys
 import time
 from src.core import config
+from src.core.database import init_db, insert_products_batch
 from src.api.client import fetch_products_from_api
 from src.parsers.product_parser import parse_products_data
-from src.exporters.to_excel import save_to_excel
+from src.core.tuik_sepeti import TUIK_GIDA_SEPETI
 
 
-def get_all_products_from_subcategory(main_category: str, sub_category: str) -> list:
+def get_products_from_category(api_category_name: str) -> list:
     """
-    Bir alt kategoriye ait TÜM sayfalardaki ürünleri, API'den boş bir ürün listesi
-    gelene kadar çeker. Bu en güvenilir yöntemdir.
+    Belirtilen tek bir API kategorisi için tüm sayfalardaki ham ürün verilerini çeker.
     """
-    all_products_in_subcategory = []
+    all_products_in_category = []
     current_page = 0
 
     while True:
-        print(f"    -> Sayfa {current_page + 1} taranıyor...")
-        payload = config.get_payload(sub_category, page=current_page, is_menu_category=False)
+        print(f"    -> '{api_category_name}' kategorisi için Sayfa {current_page + 1} taranıyor...")
 
-        raw_data_response = fetch_products_from_api(
-            url=config.SEARCH_API_URL,
-            headers=config.HEADERS,
-            payload=payload
-        )
+        payload = config.get_category_payload(category_name=api_category_name, page=current_page)
+        raw_data = fetch_products_from_api(config.CATEGORY_SEARCH_URL, config.HEADERS, payload)
 
-        if not raw_data_response:
-            print("    -> API'den yanıt alınamadı, bu kategori atlanıyor.")
+        products_list = raw_data.get('content', []) if raw_data else []
+
+        if products_list:
+            all_products_in_category.extend(products_list)
+            current_page += 1
+            time.sleep(0.5)
+        else:
+            print(f"    -> '{api_category_name}' kategorisinde başka ürün bulunamadı.")
             break
 
-        # DOĞRU KONTROL: API'DEN GELEN HAM LİSTENİN KENDİSİNİ KONTROL ET
-        products_list = raw_data_response.get('content', [])
-
-        if products_list:  # Eğer bu liste boş DEĞİLSE, ürün var demektir.
-            parsed_products = parse_products_data(products_list, main_category, sub_category)
-            all_products_in_subcategory.extend(parsed_products)
-            current_page += 1  # Bir sonraki sayfaya geç
-            time.sleep(0.5)
-        else:  # Eğer bu liste BOŞ İSE, bu kategorideki tüm sayfalar bitti demektir.
-            print("    -> Bu kategoride başka ürün bulunamadı. Tarama tamamlandı.")
-            break  # Döngüyü sonlandır.
-
-    return all_products_in_subcategory
+    return all_products_in_category
 
 
 def main():
-    print("🚀 Scraper vFINAL-RELIABLE (Doğru Sayfalama) Başlatılıyor...")
+    """Uygulamanın ana iş akışı."""
+    start_time = time.time()
+    print("🚀 Program Başlatılıyor...")
 
-    # Adım 1: Kategori Yapısını Oku (Değişiklik yok)
-    print("\nAdım 1: Kategori yapısı doğrudan konfigürasyon dosyasından okunuyor...")
-    category_structure = config.CATEGORY_STRUCTURE
-    total_sub_categories = sum(len(sub_cats) for sub_cats in category_structure.values())
-    print(
-        f"✅ Başarılı! {len(category_structure)} ana kategori ve {total_sub_categories} alt kategori işlenmek üzere yüklendi.")
+    init_db()
 
-    # Adım 2: Her Alt Kategori İçin Doğrudan Arama (Değişiklik yok)
-    all_products_total = []
-    print("\nAdım 2: Her bir alt kategori için ürünler taranıyor...")
+    print(f"\nAdım 2: TÜİK Gıda Sepeti taranıyor. Toplam {len(TUIK_GIDA_SEPETI)} madde işlenecek.")
 
-    for main_cat, sub_cats_list in category_structure.items():
-        for sub_cat in sub_cats_list:
-            print(f"\n Kategori: '{main_cat}' -> Alt Kategori: '{sub_cat}'")
-            products_from_subcategory = get_all_products_from_subcategory(main_cat, sub_cat)
+    total_products_saved = 0
+    processed_categories = set()
 
-            if products_from_subcategory:
-                print(
-                    f"  ✔️  '{sub_cat}' alt kategorisinden toplam {len(products_from_subcategory)} adet ürün çekildi.")
-                all_products_total.extend(products_from_subcategory)
-            else:
-                print(f"  ⚠️  '{sub_cat}' alt kategorisi için hiç ürün bulunamadı.")
+    for i, madde_item in enumerate(TUIK_GIDA_SEPETI, 1):
+        madde_adi = madde_item['madde_adi']
+        api_kategori_adi = madde_item.get("api_kategori_adi")
 
-    # Adım 3: Excel'e Kaydetme (Değişiklik yok)
-    filename = "market_fiyatlari_SON_VERSIYON.xlsx"
-    print(f"\nAdım 3: Toplamda bulunan {len(all_products_total)} adet ürün Excel'e kaydediliyor...")
-    save_to_excel(all_products_total, filename=filename)
+        print(f"\n({i}/{len(TUIK_GIDA_SEPETI)}) İşlenen Madde: '{madde_adi}' (Kategori: '{api_kategori_adi}')")
 
-    print(f"\n✅ Tüm işlemler tamamlandı. {len(all_products_total)} ürün '{filename}' dosyasına yazıldı.")
+        if not api_kategori_adi:
+            print(f"  ⚠️  '{madde_adi}' için 'api_kategori_adi' tanımlanmamış. Bu madde atlanıyor.")
+            continue
+
+        ham_urun_listesi = get_products_from_category(api_kategori_adi)
+
+        if not ham_urun_listesi:
+            print(f"  ⚠️  '{api_kategori_adi}' kategorisi için hiç ürün bulunamadı.")
+            continue
+
+        filtrelenmis_urunler = parse_products_data(ham_urun_listesi, madde_item)
+
+        if filtrelenmis_urunler:
+            insert_products_batch(filtrelenmis_urunler)
+            count = len(filtrelenmis_urunler)
+            total_products_saved += count
+            print(f"  ✔️  '{madde_adi}' için {count} ürün filtrelendi ve veritabanına kaydedildi.")
+        else:
+            print(f"  ⚠️  '{madde_adi}' için filtrelenecek uygun ürün bulunamadı.")
+
+    end_time = time.time()
+    total_time = end_time - start_time
+
+    print("\n" + "=" * 50)
+    print("🎉 TÜM İŞLEMLER TAMAMLANDI 🎉")
+    print(f"-> Toplam {total_products_saved} adet ürün verisi veritabanına aktarıldı.")
+    print(f"-> Toplam süre: {total_time:.2f} saniye.")
+    print("=" * 50)
 
 
 if __name__ == "__main__":
