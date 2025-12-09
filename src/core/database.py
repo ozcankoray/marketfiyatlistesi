@@ -69,6 +69,7 @@ def init_db():
             """)
 
             # Performans için indeksler oluştur
+            # Not: İndeks isimleri ve kolonlar hardcoded ve güvenilir
             indexes = [
                 ("idx_tuik_madde_kodu", "tuik_madde_kodu"),
                 ("idx_market", "market"),
@@ -77,12 +78,20 @@ def init_db():
                 ("idx_composite_madde_tarih", "tuik_madde_kodu, cekilme_tarihi")
             ]
             
+            # SQL injection koruması: sadece beyaz listelenmiş değerler
+            allowed_columns = {'tuik_madde_kodu', 'market', 'cekilme_tarihi', 'madde_adi'}
+            
             for index_name, columns in indexes:
-                cursor.execute(f"""
-                    CREATE INDEX IF NOT EXISTS {index_name} 
-                    ON Fiyatlar({columns})
-                """)
-                logger.debug(f"İndeks oluşturuldu/kontrol edildi: {index_name}")
+                # Güvenlik kontrolü
+                column_list = [col.strip() for col in columns.split(',')]
+                if all(col in allowed_columns for col in column_list):
+                    cursor.execute(f"""
+                        CREATE INDEX IF NOT EXISTS {index_name} 
+                        ON Fiyatlar({columns})
+                    """)
+                    logger.debug(f"İndeks oluşturuldu/kontrol edildi: {index_name}")
+                else:
+                    logger.warning(f"Güvenlik: Geçersiz kolon adı, indeks atlandı: {index_name}")
 
             conn.commit()
             logger.info(f"✅ Veritabanı yapısı güncellendi: {DB_FILE}")

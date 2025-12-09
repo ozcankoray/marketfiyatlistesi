@@ -37,7 +37,7 @@ def extract_unit_and_quantity(name: str) -> Tuple[str, float]:
 
     # --- ÖNCELİK 3: 'lu' veya 'li' ile biten adet formatı (örn: 100'lü, 15 li) ---
     # Bu, 'Lipton' gibi kelimelerdeki 'l' harfini litre olarak algılamamızı engeller.
-    match = re.search(r"(\d+)\s*['\']?\s*(lu|li|lü)", name_lower)
+    match = re.search(r"(\d+)\s*['']?\s*(lu|li|lü)", name_lower)
     if match:
         miktar = float(match.group(1))
         return 'adet', miktar

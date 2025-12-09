@@ -87,6 +87,7 @@ def fetch_products_from_api(url: str, headers: Dict[str, str], payload: Dict[str
     except requests.exceptions.RequestException as e:
         logger.error(f"API isteği başarısız: '{payload.get('keywords')}' - {str(e)}")
         raise
-    except Exception as e:
-        logger.error(f"Beklenmeyen hata: '{payload.get('keywords')}' - {type(e).__name__}: {str(e)}")
-        return None
+    except (ValueError, KeyError, TypeError) as e:
+        # JSON parsing hataları veya beklenmeyen veri yapısı
+        logger.error(f"Veri işleme hatası: '{payload.get('keywords')}' - {type(e).__name__}: {str(e)}")
+        raise
