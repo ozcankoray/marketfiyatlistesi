@@ -5,6 +5,7 @@ from src.api.client import fetch_products_from_api
 from src.parsers.product_parser import parse_products_data
 from src.core.tuik_sepeti import TUIK_GIDA_SEPETI
 from src.utils.logger import logger
+from src.analytics.statistics import PriceAnalytics
 
 
 def get_products_from_category(api_category_name: str) -> list:
@@ -104,6 +105,13 @@ def main():
             logger.warning(f"   - {madde}: {error[:100]}")
     
     logger.info("=" * 50)
+    
+    # Özet raporu yazdır
+    if total_products_saved > 0:
+        try:
+            PriceAnalytics.print_summary_report()
+        except Exception as e:
+            logger.error(f"Rapor oluşturulurken hata: {e}")
 
 
 if __name__ == "__main__":
