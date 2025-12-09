@@ -1,11 +1,7 @@
 import re
 from typing import List, Dict, Any, Tuple
 from datetime import date
-
-# src/parsers/product_parser.py içindeki extract_unit_and_quantity fonksiyonunu güncelliyoruz
-
-import re
-from typing import Tuple
+from src.utils.validators import validate_and_clean_products, check_duplicate_products
 
 
 def extract_unit_and_quantity(name: str) -> Tuple[str, float]:
@@ -57,6 +53,14 @@ def parse_products_data(
 ) -> List[Dict[str, Any]]:
     """
     Ham ürün listesini alır, filtreler, birim fiyatı hesaplar ve temiz bir liste döndürür.
+    Geliştirilmiş versiyon: Veri validasyonu ve deduplication eklendi.
+    
+    Args:
+        products_list: API'den gelen ham ürün listesi
+        madde_item: TÜİK madde bilgisi (filtreleme kriterleri dahil)
+    
+    Returns:
+        Temizlenmiş ve doğrulanmış ürün listesi
     """
     if not products_list:
         return []
@@ -119,5 +123,9 @@ def parse_products_data(
             'Birim Fiyat': birim_fiyat,
         }
         cleaned_products.append(cleaned_product)
+
+    # Veri doğrulama ve deduplication
+    cleaned_products = validate_and_clean_products(cleaned_products)
+    cleaned_products = check_duplicate_products(cleaned_products)
 
     return cleaned_products
